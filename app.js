@@ -13,6 +13,11 @@ class SeanCounter extends HTMLElement {
     this.counterState = createState(uuidv4(), {
       count
     });
+
+    this.unwatch = watchState(
+      () => this.counterState,
+      () => this.render()
+    );
   }
 
   connectedCallback() {
@@ -38,11 +43,67 @@ class SeanCounter extends HTMLElement {
   render() {
     this.countEl.innerText = `Count: ${this.counterState.count}`;
   }
+
+  disconnectedCallback() {
+    this.unwatch();
+  }
+}
+
+class SeanCounterList extends HTMLElement {
+  constructor() {
+    super();
+
+    this.countersState = createState(uuidv4(), {
+      counters: this.querySelectorAll('sean-counter').length
+    });
+
+    this.totalState = createState(uuidv4(), {
+      total: 0
+    });
+
+    watchState(
+      () => this.countersState,
+      () => {
+        this.querySelectorAll('sean-counter').forEach(node => {
+          setState('change total', () => this.totalState.total += node.counterState.count);
+        })
+      }
+    )
+
+    watchState(
+      () => this.totalState,
+      () => this.render()
+    )
+  }
+
+  connectedCallback() {
+    console.dir(this);
+
+    this.innerHTML = `
+      ${this.innerHTML}
+      <h3 id="total">Total: ${this.totalState.total}</h3>
+      <button id="add-counter">Add Counter</button>
+    `;
+    
+    this.totalEl = this.querySelector('#total');
+    this.addCounterBtn = this.querySelector('#add-counter');
+
+    this.addCounterBtn.addEventListener('click', () => {
+      const tempCounter = document.createElement('sean-counter');
+      this.prepend(tempCounter);
+      setState('add counter', () => this.countersState.counters = this.querySelectorAll('sean-counter').length);
+    });
+  }
+
+  render() {
+    this.totalEl.innerText = this.totalState.total;
+  }
 }
 
 customElements.define('sean-counter', SeanCounter);
+customElements.define('sean-counter-list', SeanCounterList);
 
-watchState(
-  () => Array.from(document.querySelectorAll('sean-counter')).map(node => node.counterState),
-  () => document.querySelectorAll('sean-counter').forEach(node => node.render())
-);
+// watchState(
+//   () => Array.from(document.querySelectorAll('sean-counter')).map(node => node.counterState),
+//   () => document.querySelectorAll('sean-counter').forEach(node => node.render())
+// );
