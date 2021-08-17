@@ -1,10 +1,7 @@
-const { createState, setState, watchState } = window.diffx;
+import uuidv4 from "./uuid.js";
+import TestComponent from "./TestComponent.js";
 
-function uuidv4() {
-  return ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c =>
-    (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16)
-  );
-}
+const { createState, setState, watchState } = window.diffx;
 
 class SeanCounter extends HTMLElement {
   constructor() {
@@ -58,15 +55,17 @@ class SeanCounterList extends HTMLElement {
     });
 
     this.totalState = createState(uuidv4(), {
-      total: 0
+      total: Array.from(this.querySelectorAll('sean-counter')).reduce((acc, node) => acc + node.counterState.count, 0)
     });
 
     watchState(
       () => this.countersState,
       () => {
+        let total = 0;
         this.querySelectorAll('sean-counter').forEach(node => {
-          setState('change total', () => this.totalState.total += node.counterState.count);
-        })
+          total += node.counterState.count
+        });
+        setState('change total', () => this.totalState.total = total);
       }
     )
 
@@ -77,8 +76,6 @@ class SeanCounterList extends HTMLElement {
   }
 
   connectedCallback() {
-    console.dir(this);
-
     this.innerHTML = `
       ${this.innerHTML}
       <h3 id="total">Total: ${this.totalState.total}</h3>
